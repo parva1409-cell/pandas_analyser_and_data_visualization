@@ -1,224 +1,207 @@
 import os
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
 import seaborn as sns
 
+
+FILE_NAME = os.path.join(os.path.dirname(__file__), "sales_data.csv")
 
 class SalesDataAnalyzer:
 
     def __init__(self):
-        self.data = None
-        self.last_fig = None
+        self.df = None
 
     def load_data(self):
-        file = input("Enter CSV file name: ")
-
-        if os.path.exists(file):
-            self.data = pd.read_csv(file)
-            print("Dataset loaded!")
-        else:
-            print("File not found!")
-
-    def explore(self):
-        if self.data is None:
-            print("Load dataset first!")
+        if not os.path.exists(FILE_NAME):
+            print("\nFile not found!")
             return
 
-        print("\n1. First 5 rows")
-        print("2. Last 5 rows")
-        print("3. Columns")
-        print("4. Data types")
-        print("5. Information")
+        self.df = pd.read_csv(FILE_NAME)
+        self.df.dropna(inplace=True)
+        self.df.drop_duplicates(inplace=True)
 
-        ch = input("Enter choice: ")
+        self.df["Date"] = pd.to_datetime(self.df["Date"])
 
-        if ch == "1":
-            print(self.data.head())
-        elif ch == "2":
-            print(self.data.tail())
-        elif ch == "3":
-            print(self.data.columns.tolist())
-        elif ch == "4":
-            print(self.data.dtypes)
-        elif ch == "5":
-            self.data.info()
+        self.df["month"] = self.df["Date"].dt.month_name()
+        self.df["month_no"] = self.df["Date"].dt.month
 
-    def operations(self):
-        if self.data is None:
-            print("Load dataset first!")
+        print("\nDataset loaded successfully!")
+
+    def check_data(self):
+        if self.df is None:
+            print("\nPlease load the dataset first!")
             return
 
-        print("\n1. Double column")
-        print("2. Group by")
-        print("3. Convert to NumPy")
-        print("4. Pivot table")
+        print("\n========== DATA INFORMATION ==========")
+        print("Shape:", self.df.shape)
+        print("\nData Types:")
+        print(self.df.dtypes)
+        print("\nMissing Values:")
+        print(self.df.isnull().sum())
 
-        ch = input("Enter choice: ")
-        col = input("Enter column: ")
-
-        if col not in self.data.columns:
-            print("Column not found!")
+    def view_data(self):
+        if self.df is None:
+            print("\nPlease load the dataset first!")
             return
 
-        if ch == "1":
-            print(self.data[col] * 2)
+        print("\n========== DATA PREVIEW ==========")
+        print("\nFirst 5 rows:")
+        print(self.df.head())
 
-        elif ch == "2":
-            print(self.data.groupby(col).size())
-
-        elif ch == "3":
-            print(self.data[col].to_numpy())
-
-        elif ch == "4":
-            value = input("Enter value column: ")
-            print(pd.pivot_table(self.data, index=col,
-                                 values=value, aggfunc="sum"))
-
-    def missing(self):
-        if self.data is None:
-            print("Load dataset first!")
-            return
-
-        print("\n1. Show missing")
-        print("2. Fill missing")
-        print("3. Drop missing")
-
-        ch = input("Enter choice: ")
-
-        if ch == "1":
-            print(self.data.isnull().sum())
-
-        elif ch == "2":
-            num = self.data.select_dtypes(include=np.number).columns
-            self.data[num] = self.data[num].fillna(self.data[num].mean())
-            print("Missing values filled!")
-
-        elif ch == "3":
-            self.data.dropna(inplace=True)
-            print("Missing rows removed!")
+        print("\nLast 5 rows:")
+        print(self.df.tail())
 
     def statistics(self):
-        if self.data is None:
-            print("Load dataset first!")
+        if self.df is None:
+            print("\nPlease load the dataset first!")
             return
 
-        print(self.data.describe())
-        print("\nStandard Deviation:")
-        print(self.data.select_dtypes(include=np.number).std())
-        print("\nVariance:")
-        print(self.data.select_dtypes(include=np.number).var())
+        sales = np.array(self.df["Sales"])
+        profit = np.array(self.df["Profit"])
 
-    def visualize(self):
-        if self.data is None:
-            print("Load dataset first!")
+        print("\n========== SALES STATISTICS ==========")
+        print("Total Sales:", round(np.sum(sales), 2))
+        print("Total Profit:", round(np.sum(profit), 2))
+        print("Average Sales:", round(np.mean(sales), 2))
+        print("Average Profit:", round(np.mean(profit), 2))
+        print("Best Product:",
+              self.df.groupby("Product")["Sales"].sum().idxmax())
+
+    def category_filter(self):
+        if self.df is None:
+            print("\nPlease load the dataset first!")
             return
 
-        print("""
-1. Bar Plot
-2. Line Plot
-3. Scatter Plot
-4. Pie Chart
-5. Histogram
-6. Stack Plot
-7. Heatmap
-8. Box Plot
-""")
+        category = input("\nEnter category: ")
 
-        ch = input("Enter choice: ")
-        plt.figure(figsize=(8, 5))
+        result = self.df[
+            self.df["Category"].str.lower() == category.lower()
+        ]
 
-        if ch in ["1", "2", "3"]:
-            x = input("Enter x column: ")
-            y = input("Enter y column: ")
-
-            if ch == "1":
-                plt.bar(self.data[x], self.data[y])
-            elif ch == "2":
-                plt.plot(self.data[x], self.data[y])
-            else:
-                plt.scatter(self.data[x], self.data[y])
-
-        elif ch == "4":
-            col = input("Enter column: ")
-            v = self.data[col].value_counts()
-            plt.pie(v, labels=v.index, autopct="%1.1f%%")
-
-        elif ch == "5":
-            col = input("Enter numeric column: ")
-            plt.hist(self.data[col], bins=5)
-
-        elif ch == "6":
-            x = input("Enter x column: ")
-            y = input("Enter numeric column: ")
-            plt.stackplot(self.data[x], self.data[y], labels=[y])
-            plt.legend()
-
-        elif ch == "7":
-            num = self.data.select_dtypes(include=np.number)
-            sns.heatmap(num.corr(), annot=True)
-
-        elif ch == "8":
-            col = input("Enter numeric column: ")
-            sns.boxplot(y=self.data[col])
-
+        if result.empty:
+            print("No records found!")
         else:
-            print("Invalid choice!")
-            plt.close()
+            print(result[
+                ["Transaction_ID", "Product", "Category", "Sales", "Profit"]
+            ].head(10))
+
+    def category_chart(self):
+        if self.df is None:
+            print("\nPlease load the dataset first!")
             return
 
-        plt.tight_layout()
+        data = self.df.groupby("Category")["Sales"].sum()
+
+        plt.figure(figsize=(8, 5))
+        sns.barplot(x=data.index, y=data.values)
+
+        plt.title("Sales by Category")
+        plt.xlabel("Category")
+        plt.ylabel("Sales")
+        plt.xticks(rotation=30)
         plt.show()
-        self.last_fig = plt.gcf()
 
-    def save_graph(self):
-        if self.last_fig is None:
-            print("Create a graph first!")
+    def monthly_chart(self):
+        if self.df is None:
+            print("\nPlease load the dataset first!")
             return
 
-        name = input("Enter file name: ")
-        self.last_fig.savefig(name)
-        print("Graph saved!")
+        data = self.df.groupby(
+            ["month_no", "month"]
+        )["Sales"].sum().reset_index()
+
+        data = data.sort_values("month_no")
+
+        plt.figure(figsize=(9, 5))
+        sns.lineplot(
+            data=data,
+            x="month",
+            y="Sales",
+            marker="o"
+        )
+
+        plt.title("Monthly Sales")
+        plt.xlabel("Month")
+        plt.ylabel("Sales")
+        plt.xticks(rotation=45)
+        plt.show()
+
+    def payment_chart(self):
+        if self.df is None:
+            print("\nPlease load the dataset first!")
+            return
+
+        data = self.df["Payment_Method"].value_counts()
+
+        plt.figure(figsize=(7, 7))
+        plt.pie(
+            data.values,
+            labels=data.index,
+            autopct="%1.1f%%"
+        )
+
+        plt.title("Payment Methods")
+        plt.show()
 
 
-def main():
-    analyzer = SalesDataAnalyzer()
-
-    while True:
-        print("""
+def menu():
+    print("""
 ========== SALES DATA ANALYZER ==========
 
 1. Load Dataset
-2. Explore Data
-3. DataFrame Operations
-4. Missing Data
-5. Statistics
-6. Visualization
-7. Save Graph
-8. Exit
+2. Dataset Information
+3. View Data
+4. Sales Statistics
+5. Filter by Category
+6. Category Sales Chart
+7. Monthly Sales Chart
+8. Payment Method Chart
+9. Exit
+
+=========================================
 """)
 
-        ch = input("Enter choice: ")
 
-        if ch == "1":
+def main():
+
+    analyzer = SalesDataAnalyzer()
+
+    while True:
+
+        menu()
+        choice = input("Enter your choice: ")
+
+        if choice == "1":
             analyzer.load_data()
-        elif ch == "2":
-            analyzer.explore()
-        elif ch == "3":
-            analyzer.operations()
-        elif ch == "4":
-            analyzer.missing()
-        elif ch == "5":
+
+        elif choice == "2":
+            analyzer.check_data()
+
+        elif choice == "3":
+            analyzer.view_data()
+
+        elif choice == "4":
             analyzer.statistics()
-        elif ch == "6":
-            analyzer.visualize()
-        elif ch == "7":
-            analyzer.save_graph()
-        elif ch == "8":
-            print("Thank you!")
+
+        elif choice == "5":
+            analyzer.category_filter()
+
+        elif choice == "6":
+            analyzer.category_chart()
+
+        elif choice == "7":
+            analyzer.monthly_chart()
+
+        elif choice == "8":
+            analyzer.payment_chart()
+
+        elif choice == "9":
+            print("\nGoodbye!")
             break
+
         else:
-            print("Invalid choice!")
+            print("\nInvalid choice!")
 
 
 if __name__ == "__main__":
